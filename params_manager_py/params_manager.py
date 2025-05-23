@@ -48,6 +48,9 @@ class PManager:
         self._params_data = {}
         self._verbose = verbose
 
+        # Register the parameter update callback
+        self._node.add_on_set_parameters_callback(self._on_set_parameters_callback)
+
     def _log_update(self, p: Parameter) -> None:
         """
         Logs successful parameter updates.
@@ -56,14 +59,14 @@ class PManager:
         """
         msg = f"[PARAM] '{p.name}': "
         if p.type_ == ParameterType.PARAMETER_STRING:
-            msg.append(f"'{p.value}'")
+            msg += f"'{p.value}'"
         elif p.type_ == ParameterType.PARAMETER_STRING_ARRAY:
-            msg.append("[")
+            msg += "["
             for i in range(len(p.value)):
-                msg.append(f"'{p.value[i]}'")
+                msg += f"'{p.value[i]}'"
                 if i != (len(p.value) - 1):
-                    msg.append(", ")
-            msg.append("]")
+                    msg += ", "
+            msg += "]"
         elif p.type_ == ParameterType.PARAMETER_BYTE_ARRAY:
             byte_array = p.value
             first_8 = byte_array[:8]
@@ -75,7 +78,7 @@ class PManager:
             except:
                 msg += f"['{list(first_8)}' ... '{list(last_8)}']"
         else:
-            msg.append(f"{p.value}")
+            msg += f"{p.value}"
         self._node.get_logger().info(msg)
 
     def _on_set_parameters_callback(self, params: List[Parameter]) -> SetParametersResult:
@@ -288,7 +291,7 @@ class PManager:
             additional_constraints=constraints,
             read_only=read_only,
             dynamic_typing=False,
-            integer_range=range
+            integer_range=[range]
         )
         self._node.declare_parameter(name, default_val, descriptor)
 
@@ -340,7 +343,7 @@ class PManager:
             additional_constraints=constraints,
             read_only=read_only,
             dynamic_typing=False,
-            integer_range=range
+            integer_range=[range]
         )
         self._node.declare_parameter(name, default_val, descriptor)
 
@@ -392,7 +395,7 @@ class PManager:
             additional_constraints=constraints,
             read_only=read_only,
             dynamic_typing=False,
-            floating_point_range=range
+            floating_point_range=[range]
         )
         self._node.declare_parameter(name, default_val, descriptor)
 
@@ -444,7 +447,7 @@ class PManager:
             additional_constraints=constraints,
             read_only=read_only,
             dynamic_typing=False,
-            floating_point_range=range
+            floating_point_range=[range]
         )
         self._node.declare_parameter(name, default_val, descriptor)
 
@@ -531,7 +534,7 @@ class PManager:
     def declare_byte_array_parameter(
         self,
         name: str,
-        default_val: Any,
+        default_val: bytes,
         desc: str,
         constraints: str,
         read_only: bool,
@@ -578,12 +581,24 @@ class PManager:
         try:
             with open(params_file, "r") as f:
                 params_yaml = yaml.load(f, Loader=yaml.SafeLoader)
-        except:
-            # Nothing to do here, simply go on
-            return
-        if params_yaml is None:
-            # Nothing to do here as well
-            return
+        except FileNotFoundError:
+            self._node.get_logger().fatal(f"Parameters file not found: {params_file}")
+            raise RuntimeError(
+                f"Parameters file not found: {params_file}")
+        except yaml.YAMLError as e:
+            self._node.get_logger().fatal(f"Invalid YAML in {params_file}: {e}")
+            raise RuntimeError(
+                f"Invalid YAML in {params_file}: {e}")
+        except Exception as e:
+            self._node.get_logger().fatal(f"Failed to parse parameters file: {e}")
+            raise RuntimeError(
+                f"Failed to parse parameters file: {e}")
+
+        if params_yaml is None or 'params' not in params_yaml:
+            self._node.get_logger().fatal(
+                f"Invalid parameters file: {params_file}")
+            raise RuntimeError(
+                f"Invalid parameters file: {params_file}")
 
         # Get ordered params dictionary and declare the parameters
         # This highly depends on the parameter type and YAML parsing
@@ -725,6 +740,3 @@ class PManager:
 
         # Open and parse the parameters file
         self._parse_params_file(params_file_path)
-
-        # Register the parameter update callback
-        self._node.add_on_set_parameters_callback(self._on_set_parameters_callback)
