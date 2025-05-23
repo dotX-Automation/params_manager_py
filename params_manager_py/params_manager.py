@@ -102,7 +102,7 @@ class PManager:
                 continue
 
             # Check type
-            if p.type_ != p_data['type']:
+            if p.type_ != Parameter.Type(p_data['type']):
                 self._node.get_logger().error(
                     f"Parameter '{p.name}' type mismatch")
                 res.successful = False
@@ -119,7 +119,7 @@ class PManager:
                 return res
 
             # Update variable, if present
-            if hasattr(self._node, p_data['var_name']):
+            if 'var_name' in p_data and p_data['var_name'] != "":
                 setattr(self._node, p_data['var_name'], p.value)
 
             # Log update
