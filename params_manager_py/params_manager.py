@@ -96,13 +96,25 @@ class PManager:
 
         # Check and update parameters
         for p in params:
+
+            # Flag for special case: empty array treated as byte array by rclpy
+            special_case = False
+
             # Check if the parameter is declared and get its data
             p_data = self._params_data.get(p.name, None)
             if p_data is None:
                 continue
 
+            # Check type for special case
+            if p.type_ == Parameter.Type.BYTE_ARRAY and len(p.value) == 0 and (
+                    Parameter.Type(p_data['type']) == Parameter.Type.BOOL_ARRAY or
+                    Parameter.Type(p_data['type']) == Parameter.Type.INTEGER_ARRAY or
+                    Parameter.Type(p_data['type']) == Parameter.Type.DOUBLE_ARRAY or
+                    Parameter.Type(p_data['type']) == Parameter.Type.STRING_ARRAY):
+                special_case = True
+
             # Check type
-            if p.type_ != Parameter.Type(p_data['type']):
+            if p.type_ != Parameter.Type(p_data['type']) and not special_case:
                 self._node.get_logger().error(
                     f"Parameter '{p.name}' type mismatch")
                 res.successful = False
@@ -241,6 +253,9 @@ class PManager:
             read_only=read_only,
             dynamic_typing=False
         )
+        if len(default_val) == 0:
+            # Fix for empty array treated as byte array by rclpy
+            descriptor.dynamic_typing = True
         self._node.declare_parameter(name, default_val, descriptor)
 
     def _declare_integer_parameter(
@@ -345,6 +360,9 @@ class PManager:
             dynamic_typing=False,
             integer_range=[range]
         )
+        if len(default_val) == 0:
+            # Fix for empty array treated as byte array by rclpy
+            descriptor.dynamic_typing = True
         self._node.declare_parameter(name, default_val, descriptor)
 
     def _declare_double_parameter(
@@ -449,6 +467,9 @@ class PManager:
             dynamic_typing=False,
             floating_point_range=[range]
         )
+        if len(default_val) == 0:
+            # Fix for empty array treated as byte array by rclpy
+            descriptor.dynamic_typing = True
         self._node.declare_parameter(name, default_val, descriptor)
 
     def _declare_string_parameter(
@@ -529,6 +550,9 @@ class PManager:
             read_only=read_only,
             dynamic_typing=False
         )
+        if len(default_val) == 0:
+            # Fix for empty array treated as byte array by rclpy
+            descriptor.dynamic_typing = True
         self._node.declare_parameter(name, default_val, descriptor)
 
     def declare_byte_array_parameter(
