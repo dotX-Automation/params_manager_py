@@ -745,22 +745,28 @@ class PManager:
         """
         Initializes the manager and sets the configured node parameters.
         """
-        # First, declare the parameters file path as a node parameter and retrieve it
-        params_file_path_descriptor = ParameterDescriptor(
-            name="dua.params_file_path",
-            type=ParameterType.PARAMETER_STRING,
-            description="Path to the node parameters configuration YAML file.",
-            additional_constraints="Must be a valid file path, if empty parameters are not configured.",
-            read_only=True,
-            dynamic_typing=False
-        )
-        params_file_path: str = self._node.declare_parameter(
-            "dua.params_file_path",
-            "",
-            params_file_path_descriptor
-        ).value
-        if len(params_file_path) == 0:
-            return
+        params_file_attr = getattr(self._node, "_PARAMS_FILE_PATH", None)
+        if params_file_attr is not None:
+            params_file_path: str = str(params_file_attr)
+            if len(params_file_attr) == 0:
+                return
+        else:
+            # Declare the parameters file path as a node parameter and retrieve it
+            params_file_path_descriptor = ParameterDescriptor(
+                name="dua.params_file_path",
+                type=ParameterType.PARAMETER_STRING,
+                description="Path to the node parameters configuration YAML file.",
+                additional_constraints="Must be a valid file path; if empty, parameters are not configured.",
+                read_only=True,
+                dynamic_typing=False
+            )
+            params_file_path: str = self._node.declare_parameter(
+                "dua.params_file_path",
+                "",
+                params_file_path_descriptor
+            ).value
+            if len(params_file_path) == 0:
+                return
 
         # Open and parse the parameters file
         self._parse_params_file(params_file_path)
